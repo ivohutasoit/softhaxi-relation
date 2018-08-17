@@ -122,6 +122,37 @@ async function validateInvitation(ctx, next) {
   return next()
 }
 
+async function validateSearch(ctx, next) {
+  const req = ctx.request.body
+  var valid = true
+  var messages = {}
+  if(!req.group_id) {
+    if(valid) valid = false
+    messages.group_id = 'required'
+  } else {
+    await memberRepository.find({group_id : req.group_id, 
+      user_id: ctx.state.user.id, 
+      is_deleted: false
+    }).then((members) => {
+      if(members.length < 0) {
+        if(valid) valid = false
+        messages.user_id = 'Not found'
+      }
+    })
+  }
+
+  if(!valid) {
+    ctx.status = 400
+    ctx.body = {
+      status: 'ERROR',
+      messages: messages
+    }
+    return ctx
+  }
+
+  return next()
+}
+
 module.exports = {
-  validateAdd
+  validateAdd, validateSearch
 }
