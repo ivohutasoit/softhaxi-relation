@@ -21,12 +21,12 @@ async function isAuthenticated(ctx, next) {
     }
   }
   return request(options).then((response) => {
-      ctx.state.user = response.data.user
-      return next()
-    }).catch((err) => { 
-      console.log(err) 
-      return next(err)
-    })
+    ctx.state.user = response.data.user
+    return next()
+  }).catch((err) => { 
+    console.log(err) 
+    return next(err)
+  })
 }
 
 module.exports = { 

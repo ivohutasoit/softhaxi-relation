@@ -9,14 +9,14 @@ module.exports = {
     test: {
         client: 'sqlite3',
         connection: {
-          filename: '../rsdbtest.sqlite3'
+          filename: '../srsdbtest.sqlite3'
         },
         migrations: {
-          directory: path.resolve(base, 'migrations', 'sqlite3'),
+          directory: path.resolve(base, 'migrations'),
           tableName: 'migrations'
         },
         seeds: {
-          directory: path.resolve(base, 'seeds', 'sqlite3')
+          directory: path.resolve(base, 'seeds')
         },
         useNullAsDefault: true
       },
@@ -24,14 +24,14 @@ module.exports = {
       development: {
         client: 'sqlite3',
         connection: {
-          filename: '../rsdbdev.sqlite3'
+          filename: '../srsdbdev.sqlite3'
         },
         migrations: {
-          directory: path.resolve(base, 'migrations', 'sqlite3'),
+          directory: path.resolve(base, 'migrations'),
           tableName: 'migrations'
         },
         seeds: {
-          directory: path.resolve(base, 'seeds', 'sqlite3')
+          directory: path.resolve(base, 'seeds')
         },
         useNullAsDefault: true
       },
@@ -41,7 +41,7 @@ module.exports = {
       connection: {
         host: process.env.DATABASE_SERVER || 'localhost',
         port: process.env.DATABASE_PORT || 5432,
-        database: process.env.DATABASE_NAME || 'rsdbstag',
+        database: process.env.DATABASE_NAME || 'srsdbstag',
         user: process.env.DATABASE_USERNAME || 'username',
         password: process.env.DATABASE_PASSWORD || 'password',
         ssl: true
@@ -64,7 +64,7 @@ module.exports = {
       connection: {
         host: process.env.DATABASE_SERVER || 'localhost',
         port: process.env.DATABASE_PORT || 5432,
-        database: process.env.DATABASE_NAME || 'rsdbprod',
+        database: process.env.DATABASE_NAME || 'srsdbprod',
         user: process.env.DATABASE_USERNAME || 'username',
         password: process.env.DATABASE_PASSWORD || 'password',
         ssl: true

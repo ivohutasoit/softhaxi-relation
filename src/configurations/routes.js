@@ -4,6 +4,7 @@ const Router = require('koa-router')
 
 const application = require('./application')
 const authMiddlerware = require('../middlewares/auth.middleware')
+const groupRoute = require('../routes/group.route')
 
 const routes = new Router()
 const apiV1 = new Router({ prefix: '/api/v1' })
@@ -21,6 +22,7 @@ apiV1.get('/auth/info', authMiddlerware.isAuthenticated, async(ctx) => {
   return ctx
 })
 
+apiV1.use('/group', authMiddlerware.isAuthenticated, groupRoute.routes(), groupRoute.allowedMethods())
 
 routes.use(apiV1.routes(), apiV1.allowedMethods())
 
