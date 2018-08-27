@@ -1,12 +1,60 @@
 'use strict'
 
-const request = require('request-promise')
+const request = require('request-promise');
+
+const { Group, Member } = require('../models');
 
 const groupRepository = require('../../repositories/group.repository')
 const memberRepository = require('../../repositories/member.repository')
 
 /**
- * 
+ * @since 1.1.0
+ * @param {Object} ctx 
+ * @param {function} next callback 
+ */
+async function validateDirectAssign(ctx, next) {
+  const req = ctx.request.body;
+  var valid = true;
+  var messages = {};
+  if(!req.user_id) {
+    if(valid) valid = false;
+    messages.user_id = 'required';
+  } else {
+    const uri = process.env.THIRDPARTY_API_URI || 'http://localhost:3000/api/v1';
+    const options = {
+      method: 'GET',
+      uri: uri + `/user/profile/${req.user_id}`,
+      json: true,
+      headers: {
+        authorization: `Bearer ${ctx.headers.authorization.split(' ')[1]}`,
+      }
+    };
+    await request(options).then((res) => {
+      if(res.status === 'ERROR') {
+        if(valid) valid = false;
+        messages.user_id = res.message;
+      }
+    }).catch((err) => { 
+      if(valid) valid = false;
+      messages.user_id = err.message;
+    });
+  }
+
+  if(!valid) {
+    ctx.status = 400;
+    ctx.body = {
+      status: 'ERROR',
+      messages: messages
+    };
+    return ctx;
+  }
+
+  return next();
+}
+
+/**
+ * @deprecated since version 1.1.0
+ * @since 1.0.0
  * @param {Object} ctx 
  * @param {Function} next 
  */
@@ -94,7 +142,8 @@ async function validateAdd(ctx, next) {
 }
 
 /**
- * 
+ * @deprecated since version 1.1.0
+ * @since 1.0.0
  * @param {Object} ctx 
  * @param {Function} next 
  */
@@ -122,37 +171,55 @@ async function validateInvitation(ctx, next) {
   return next()
 }
 
-async function validateSearch(ctx, next) {
-  const req = ctx.request.body
-  var valid = true
-  var messages = {}
-  if(!req.group_id) {
-    if(valid) valid = false
-    messages.group_id = 'required'
-  } else {
-    await memberRepository.find({group_id : req.group_id, 
-      user_id: ctx.state.user.id, 
-      is_deleted: false
-    }).then((members) => {
-      if(members.length < 0) {
-        if(valid) valid = false
-        messages.user_id = 'Not found'
-      }
-    })
+/**
+ * @since 1.1.0
+ * @param {Object} ctx 
+ * @param {function} next callback 
+ */
+async function validateSearchByGroup(ctx, next) {
+  const req = ctx.request.body;
+  var valid = true;
+  var messages = {};
+
+  if(!req.group_id && !req.group_name) {
+    if(valid) valid = false;
+    messages.keyword = 'invalid keyword. Use \'group_id\' or \'group_name\'';
+  }
+
+  if(req.group_id) {
+    var group = await Group.query()
+      .where('id', req.group_id)
+      .andWhere('is_deleted', false)
+      .select('id', 'name', 'is_active')
+      .first();
+    if(!group) {
+      if(valid) valid = false;
+      messages.group_id = 'not found';
+    }
+  } else if(req.group_name) {
+    var group = await Group.query()
+      .whereRaw('upper(name) like %?%', [req.group_name.toUpperCase()])
+      .andWhere('is_deleted', false)
+      .select('id', 'name', 'is_active')
+      .first();
+    if(!group) {
+      if(valid) valid = false;
+      messages.group_id = 'not found';
+    }
   }
 
   if(!valid) {
-    ctx.status = 400
+    ctx.status = 400;
     ctx.body = {
       status: 'ERROR',
       messages: messages
-    }
-    return ctx
+    };
+    return ctx;
   }
 
-  return next()
+  return next();
 }
 
 module.exports = {
-  validateAdd, validateSearch
-}
+  validateDirectAssign, validateAdd, validateSearchByGroup
+};
