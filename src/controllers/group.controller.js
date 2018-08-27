@@ -1,83 +1,71 @@
 'use strict'
 
-const Router = require('koa-router')
-const uuid = require('uuid/v1')
+const lodash = require('lodash');
+const { transaction } = require('objection');
+const uuid = require('uuid/v1');
 
-const groupRepository = require('../repositories/group.repository')
-const groupValidator = require('../middlewares/validators/group.validator')
-const memberRepository = require('../repositories/member.repository')
-
-const routes = new Router()
+const { Group } = require('../models');
 
 //#region Group Routes
-routes.get('/', async(ctx) => {
-  await groupRepository.findByUserId(ctx.state.user.id).then((groups) => {
-    ctx.status = 200
+/**
+ * @since 1.1.0
+ * @param {Object} ctx 
+ */
+async function list(ctx) {
+  try {
+    const groupsCreatedBy = await Group.query()
+      .where('created_by', ctx.state.user.id)
+      .andWhere('is_deleted', false)
+      .andWhereRaw('parent_id IS NULL')
+      .select('id', 'name', 'public_name', 'description', 'founded_at', 'type',
+        'scope', 'is_business', 'is_active', 'created_at');
+
+    ctx.status = 200;
     ctx.body = {
       status: 'SUCCESS',
-      data: groups
+      data: groupsCreatedBy !== undefined ? groupsCreatedBy : []
     }
-    return ctx
-  }).catch((err) => {
-    ctx.status = 400 
-    ctx.body = { message: err.message || 'Error while getting tasks' }
-    return ctx
-  })
-})
+  } catch(err) {
+    console.log(err);
+    ctx.status = 400;
+    ctx.body = { status: 'ERROR', message: err.message || 'Error while getting tasks' };
+  }
+}
 
-routes.post('/', groupValidator.validateNew, async(ctx) => {
-  const req = ctx.request.body
-  var scope = req.scope ? req.scope : 0
-  var type = req.type ? req.type.toUpperCase() : 'COMMUNITY'
-  if(type === 'FAMILLY')  scope = 3
-    
-  await groupRepository.create({
-    id: uuid(),
-    name: req.name,
-    public_name: req.public_name ? req.public_name : req.name,
-    description: req.description,
-    type: type,
-    scope: scope,
-    created_by: ctx.state.user.id
-  }).then(async(group) => {
-    if(group) {
-      await memberRepository.create({ 
+/**
+ * @since 1.1.0
+ * @param {Object} ctx 
+ */
+async function create(ctx) {
+  try {
+    const req = ctx.request.body;
+    const group = await transaction(Group, async(Group) => {
+      const returnGroup = await Group.query().insert({
         id: uuid(),
-        user_id: ctx.state.user.id,
-        group_id: group.id,
-        role: 'ADMINISTRATOR',
+        name: lodash.capitalize(req.name),
+        public_name: req.public_name ? lodash.capitalize(req.public_name) : lodash.capitalize(req.name),
+        description: lodash.capitalize(req.description),
+        founded_at: req.founded_at,
+        type: !req.type ? 'COMMUNITY' : req.type.toUpperCase(),
+        scope: !req.scope ? 0 : req.scope,
+        is_business: !req.is_business ? false : req.is_business,
         is_active: true,
         created_by: ctx.state.user.id
-      }).catch((err) => {
-        console.log(err)
-      })
+      });
 
-      ctx.status = 201
-      ctx.body = {
-        status: 'SUCCESS', 
-        data: {
-          id: group.id,
-          name: group.name,
-          public_name: group.public_name,
-          type: group.type,
-          scope: group.scope,
-          since: group.founded_at,
-          member: {
-            administor: { 
-              id: ctx.state.user.id,
-              username: ctx.state.user.username
-            }
-          }
-        }
-      }
-      return ctx
+      return returnGroup;
+    });
+
+    if(group) {
+      ctx.status = 201;
+      ctx.body = { status: 'SUCCESS', data: group };
     }
-  }).catch((err) => {
-    ctx.status = 400 
-    ctx.body = { status: 'ERROR', message: err.message || 'Error while getting tasks' }
-    return ctx
-  })
-})
+  } catch(err) {
+    console.log(err);
+    ctx.status = 400;
+    ctx.body = { status: 'ERROR', message: err.message || 'Error while getting tasks' };
+  }
+}
 
 //#endregion
 
@@ -85,4 +73,9 @@ routes.post('/', groupValidator.validateNew, async(ctx) => {
 
 //#endregion
 
-module.exports = routes
+/**
+ * @since 1.1.0
+ */
+module.exports = {
+  list, create
+};

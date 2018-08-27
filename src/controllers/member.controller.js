@@ -1,8 +1,10 @@
 'use strict'
 
-const request = require('request-promise')
+const request = require('request-promise');
 const Router = require('koa-router')
-const uuid = require('uuid/v1')
+const uuid = require('uuid/v1');
+
+const { Group, Member } = require('../models');
 
 const memberRepository = require('../repositories/member.repository')
 const memberValidator = require('../middlewares/validators/member.validator')
@@ -10,6 +12,30 @@ const memberValidator = require('../middlewares/validators/member.validator')
 const routes = new Router()
 
 //#region Member Routes
+/**
+ * @since 1.1.0
+ * @param {Object} ctx 
+ */
+async function findByGroup(ctx) {
+  try {
+    const req = ctx.request.body;
+    const members = await Member.query()
+        .join('groups', 'groups.id', 'members.group_id')
+        .where('groups.id', req.group_id)
+        .andWhere('groups.is_deleted', false)
+        .andWhere('members.is_deleted', false)
+        .select('members.id', 'members.user_id', 'members.role', 
+          'members.is_active', 'members.invitation_code', 'members.accepted');
+
+    ctx.status = 200;
+    ctx.body = { status: 'SUCCESS', data: members !== undefined ? members : [] };
+  } catch(err) {
+    console.log(err);
+    ctx.status = 400;
+    ctx.body = { status: 'ERROR', message: err.message || 'Error while getting tasks' };
+  }
+}
+
 routes.post('/:group', memberValidator.validateSearch, async(ctx) => {
   const req = ctx.request.body
   await memberRepository.find({ group_id: req.group_id, is_deleted: false }).then(async(members) => {
@@ -85,4 +111,9 @@ routes.post('/add', memberValidator.validateAdd, async(ctx) => {
 }) */
 //#endregion
 
-module.exports = routes
+/**
+ * @since 1.1.0
+ */
+module.exports = {
+  findByGroup
+};
