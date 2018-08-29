@@ -8,15 +8,15 @@ Service for managing the relation of users and group
 1. [ ] Group Management
    - [x] Listing group
    - [x] Create group
-   - [x] Direct add member
+   - [x] Invite direct user
    - [ ] Invite member using email or mobile number 
    - [ ] Validate member role 
-2. [ ] Refactoring project structure
+2. [x] Refactoring project structure
    - [x] Routes
-   - [ ] Controllers
+   - [x] Controllers
    - [x] Configurations
    - [x] Middlewares
-   - [ ] Deprecated repositories
+   - [x] Deprecated repositories
    - [x] Validators
 
 ## References

@@ -1,15 +1,12 @@
 'use strict'
 
+const NodeCache = require('node-cache');
 const request = require('request-promise');
-const Router = require('koa-router')
 const uuid = require('uuid/v1');
 
 const { Group, Member } = require('../models');
 
-const memberRepository = require('../repositories/member.repository')
-const memberValidator = require('../middlewares/validators/member.validator')
-
-const routes = new Router()
+const cache = new NodeCache({ stdTTL: 60 * 60 * 1, checkperiod: 60 * 60 * 0.2, useClones: true });
 
 //#region Member Routes
 /**
@@ -19,13 +16,84 @@ const routes = new Router()
 async function findByGroup(ctx) {
   try {
     const req = ctx.request.body;
-    const members = await Member.query()
+    var members = cache.get('members_' + req.group_id);
+
+    if(members === undefined || !members) {
+      members = await Member.query()
         .join('groups', 'groups.id', 'members.group_id')
         .where('groups.id', req.group_id)
         .andWhere('groups.is_deleted', false)
         .andWhere('members.is_deleted', false)
-        .select('members.id', 'members.user_id', 'members.role', 
-          'members.is_active', 'members.invitation_code', 'members.accepted');
+        .andWhere('members.is_active', true)
+        .select('members.id', 'members.user_id', 'groups.id as group_id', 'groups.name as group_name', 'members.role');
+      if(members !== undefined) {
+        var data = [];
+        const uri = process.env.API_THIRDPARTY_URI || 'http://localhost:3000/api/v1';
+        for (var member of members) {
+          const options = {
+            method: 'GET',
+            uri: uri + '/user/profile/' + member.user_id ,
+            json: true,
+            headers: {
+              authorization: `Bearer ${ctx.headers.authorization.split(' ')[1]}`,
+            }
+          };
+          await request(options).then((res) => {
+            if(res.status === 'SUCCESS') {
+              member = {
+                id: member.id,
+                user: {
+                  id: member.user_id,
+                  username: res.data.username
+                },
+                group: {
+                  id: member.group_id,
+                  name: member.group_name
+                },
+                role: member.role,
+                accepted: member.accepted,
+                invitation_code: member.invitation_code
+              }
+            } else {
+              member = {
+                id: member.id,
+                user: {
+                  id: member.user_id
+                },
+                group: {
+                  id: member.group_id,
+                  name: member.group_name
+                },
+                role: member.role,
+                accepted: member.accepted,
+                invitation_code: member.invitation_code
+              }
+            }
+            data.push(member);
+          }).catch((err) => { 
+            console.error(err);
+            member = {
+              id: member.id,
+              user: {
+                id: member.user_id
+              },
+              group: {
+                id: member.group_id,
+                name: member.group_name
+              },
+              role: member.role,
+              accepted: member.accepted,
+              invitation_code: member.invitation_code
+            }
+            data.push(member);
+          });
+        }
+        members = data;
+      }
+
+      if(members !== undefined || members)
+        cache.set('members_' + req.group_id, members);
+    }
 
     ctx.status = 200;
     ctx.body = { status: 'SUCCESS', data: members !== undefined ? members : [] };
@@ -36,79 +104,6 @@ async function findByGroup(ctx) {
   }
 }
 
-routes.post('/:group', memberValidator.validateSearch, async(ctx) => {
-  const req = ctx.request.body
-  await memberRepository.find({ group_id: req.group_id, is_deleted: false }).then(async(members) => {
-    var data = []
-    const uri = process.env.PROFILE_SERVICE_URI || 'http://localhost:3000/api/v1/profile/user/'
-    for (const member of members) {
-      const options = {
-        method: 'GET',
-        uri: uri  + member.user_id ,
-        json: true,
-        headers: {
-          authorization: `Bearer ${ctx.headers.authorization.split(' ')[1]}`,
-        }
-      }
-      await request(options).then((res) => {
-        if(res.status === 'SUCCESS') {
-          data.push({
-            id: member.user_id,
-            username: res.data.username,
-            role: member.role
-          })
-        } else {
-          data.push({
-            id: member.user_id,
-            role: member.role
-          })
-        }
-      }).catch((err) => { 
-        data.push({
-          id: member.user_id,
-          role: member.role
-        })
-      })
-    }
-
-    ctx.status = 200
-    ctx.body = {
-      status: 'SUCCESS',
-      data: data
-    }
-  }).catch((err) => {
-    ctx.status = 400 
-    ctx.body = { message: err.message || 'Error while getting tasks' }
-    return ctx
-  })
-})
-
-routes.post('/add', memberValidator.validateAdd, async(ctx) => {
-  const req = ctx.request.body
-  await memberRepository.create({
-    id: uuid(),
-    user_id: req.user_id,
-    group_id: req.group_id,
-    role: !req.role ? 'MEMBER' : req.role.toUpperCase(),
-    is_active: true,
-    created_by: ctx.state.user.id
-  }).then((member) => {
-    ctx.status = 201
-    ctx.body = {
-      status: 'SUCCESS',
-      data: member
-    }
-    return ctx
-  }).catch((err) => {
-    ctx.status = 400 
-    ctx.body = { message: err.message || 'Error while getting tasks' }
-    return ctx
-  })
-})
-
-/* routes.post('invite', memberValidator.validateInvite, async(ctx) => {
-  
-}) */
 //#endregion
 
 /**

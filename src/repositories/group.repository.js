@@ -3,7 +3,7 @@
 const database = require('../configurations/connection')['database']
 
 /**
- * 
+ * @deprecated since version 1.1.0
  * @param {String} id 
  */
 function findById(id) {
@@ -11,13 +11,17 @@ function findById(id) {
     .first().catch((error) => { throw error })
 }
 
+/**
+ * @deprecated since version 1.1.0
+ * @param {String} id 
+ */
 function findByParentId(id) {
   return database('groups').where({ parent_id: id, is_deleted: false})
     .catch((error) => { throw error })
 }
 
 /**
- * 
+ * @deprecated since version 1.1.0
  * @param {String} userId 
  */
 function findByUserId(userId) {
@@ -26,7 +30,7 @@ function findByUserId(userId) {
 }
 
 /**
- * 
+ * @deprecated since version 1.1.0
  * @param {Object} groupData 
  */
 function create(groupData) {

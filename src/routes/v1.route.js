@@ -13,7 +13,17 @@ const v1 = new Router({ prefix: '/api/v1'});
 v1.get('/group', ThirdParty.authenticatedUser, Controller.Group.list);
 v1.post('/group', ThirdParty.authenticatedUser, 
     Validator.group.validateCreate, Controller.Group.create);
+v1.post('/group/invite', ThirdParty.authenticatedUser,
+    Validator.invitation.validateUserToGroup, Controller.Invitation.userToGroup);
 v1.post('/group/member/search', ThirdParty.authenticatedUser, 
-    Validator.member.validateSearchByGroup, Controller.Member.findByGroup)
+    Validator.member.validateSearchByGroup, Controller.Member.findByGroup);
+
+// Group Member Invitation
+v1.post('/group/accept_invitation', ThirdParty.authenticatedUser, 
+    Validator.invitation.validateAcceptByUser, Controller.Invitation.acceptByUser);
+
+// Group Relation
+v1.post('/group/relation/same', ThirdParty.authenticatedUser,
+    Validator.relation.validateOnSameGroup, Controller.Relation.verifyOnSameGroup);
 
 module.exports = v1;
