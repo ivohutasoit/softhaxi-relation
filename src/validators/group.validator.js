@@ -45,8 +45,36 @@ async function validateCreate(ctx, next) {
 }
 
 /**
+ * 
+ * @since 1.1.0
+ * @param {Object} ctx 
+ * @param {Function} next callback 
+ */
+async function validateProfile(ctx, next) {
+  const req = ctx.request.body;
+  var valid = true;
+  var messages = { };
+
+  if(!req.group_id) {
+    if(valid) valid = false;
+    messages.group_id = 'required';
+  }
+
+  if(!valid) {
+    ctx.status = 400;
+    ctx.body = {
+      status: 'ERROR',
+      messages: messages
+    }
+    return ctx;
+  }
+
+  return next();
+}
+
+/**
  * @since 1.1.0
  */
 module.exports = {
-  validateCreate
+  validateCreate,validateProfile
 };

@@ -1,5 +1,7 @@
 'use strict'
 
+const request = require('request-promise');
+
 const { Group } = require('../models');
 
 /**
@@ -7,7 +9,7 @@ const { Group } = require('../models');
  * @param {Object} ctx 
  * @param {Function} next callback 
  */
-async function validateOnSameGroup(ctx, next) {
+async function validateVerify(ctx, next) {
   const req = ctx.request.body;
 
   var valid = true;
@@ -50,6 +52,7 @@ async function validateOnSameGroup(ctx, next) {
     await request(options).then((res) => {
       if(res.status === 'SUCCESS') {
         user = res.data;
+        ctx.request.body.username = user.username;
       }
     }).catch((err) => { 
       console.error(err);
@@ -74,5 +77,5 @@ async function validateOnSameGroup(ctx, next) {
  * @since 1.1.0
  */
 module.exports = {
-  validateOnSameGroup
+  validateVerify
 }

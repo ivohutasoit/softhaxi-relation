@@ -1,10 +1,12 @@
 'use strict'
 
+const { Member } = require('../models');
+
 /**
  * @since 1.1.0
  * @param {Object} ctx 
  */
-async function verifyOnSameGroup(ctx) {
+async function verify(ctx) {
   try { 
     const req = ctx.request.body;
     const authMember = await Member.query()
@@ -15,23 +17,25 @@ async function verifyOnSameGroup(ctx) {
         .andWhere('members.is_deleted', false)
         .select('members.id', 'members.group_id', 'groups.name as group_name')
         .first();
-
     const userMember = await Member.query()
         .join('groups', 'groups.id', 'members.group_id')
         .where('members.group_id', req.group_id)
         .andWhere('members.user_id', req.user_id)
         .andWhere('members.is_active', true)
         .andWhere('members.is_deleted', false)
-        .select('members.id', 'members.group_id', 'groups.name as group_name')
+        .select('members.id', 'members.group_id', 'groups.public_name as group_name')
         .first();
-
     if(authMember && userMember) {
       if(authMember.group_id === userMember.group_id) {
         ctx.status = 200;
         ctx.body = {
           status: 'SUCCESS',
           data: {
-            on_same_group: true,
+            same_group: true,
+            user: {
+              id: req.user_id,
+              username: req.username
+            },
             group: {
               id: authMember.group_id,
               name: authMember.group_name
@@ -63,5 +67,5 @@ async function verifyOnSameGroup(ctx) {
  * @since 1.1.0
  */
 module.exports = {
-  verifyOnSameGroup
+  verify
 };

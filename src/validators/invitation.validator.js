@@ -93,10 +93,15 @@ async function validateUserToGroup(ctx, next) {
     if(group !== undefined && user != undefined) {
       const role = !req.role ? 'MEMBER' : req.role.toUpperCase();
       ctx.request.body.role = role;
-      if(group.type !== 'FAMILLY') {
-        if(role === 'HUSBAND' || role === 'WIFE' || role === 'CHILD') {
+      if(group.type === 'FAMILLY') {
+        if(role === 'MEMBER') {
           if(valid) valid = false;
           messages.role = 'could not be assigned since \'Familly\' group';
+        }
+      } else if(group.type !== 'FAMILLY') {
+        if(role === 'HUSBAND' || role === 'WIFE' || role === 'CHILD') {
+          if(valid) valid = false;
+          messages.role = 'could not be assigned since group type is not \'Familly\' group';
         }
       } else {
         var member = await Member.query()

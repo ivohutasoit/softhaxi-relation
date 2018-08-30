@@ -53,6 +53,9 @@ async function validateSearchByGroup(ctx, next) {
   return next();
 }
 
+/**
+ * @since 1.1.0
+ */
 module.exports = {
   validateSearchByGroup
 };

@@ -1,6 +1,7 @@
 'use strict'
 
 const pincode = require('generate-pincode');
+const uuid = require('uuid/v1');
 
 const { Group, Member } = require('../models');
 
@@ -46,7 +47,7 @@ async function userToGroup(ctx) {
           id: member.id,
           user: {
             id: member.user_id,
-            username: `@${req.username}`
+            username: req.username
           },
           group: {
             id: member.group_id,
@@ -113,8 +114,62 @@ async function acceptByUser(ctx) {
 }
 
 /**
+ * This function can be used by group administrator only
+ * 
+ * @since 1.1.0
+ * @param {Object} ctx 
+ */
+async function directAddToGroup(ctx) {
+  try {
+    const req = ctx.request.body;
+    var member;
+    if(req.member_id) {
+      ctx.status = 400;
+      ctx.body = {
+        status: 'ERROR',
+        message: 'Please request to accept grop invitation.'
+      };
+    } else { 
+      member = await Member.query() 
+        .insert({ 
+          id: uuid(),
+          user_id: req.user_id,
+          group_id: req.group_id,
+          role: req.role,
+          is_active:true,
+          created_by: ctx.state.user.id
+        });
+      if(member) {
+        ctx.status = 201;
+        ctx.body = { status: 'SUCCESS', 
+          message: `User has been added as a member group`,
+          data: {
+            id: member.id,
+            user: {
+              id: member.user_id,
+              username: req.username
+            },
+            group: {
+              id: member.group_id,
+              name: req.group_name
+            },
+            as: member.role
+          }
+        };
+      }
+    }
+    
+    // TODO send invitation request to email && client app
+  } catch(err) {
+    console.log(err);
+    ctx.status = 400;
+    ctx.body = { status: 'ERROR', message: err.message || 'Error while getting tasks' };
+  }
+}
+
+/**
  * @since 1.1.0
  */
 module.exports = {
-  userToGroup, acceptByUser
+  userToGroup, acceptByUser, directAddToGroup
 };

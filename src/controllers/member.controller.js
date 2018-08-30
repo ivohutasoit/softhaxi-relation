@@ -6,7 +6,7 @@ const uuid = require('uuid/v1');
 
 const { Group, Member } = require('../models');
 
-const cache = new NodeCache({ stdTTL: 60 * 60 * 1, checkperiod: 60 * 60 * 0.2, useClones: true });
+const cache = new NodeCache({ stdTTL: 10, checkperiod: 10 * 0.2, useClones: true });
 
 //#region Member Routes
 /**
